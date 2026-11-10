@@ -17,7 +17,7 @@ export function PropertyCard({ l, saved = false, layout = "grid", priority = fal
   const href = `/property/${l.slug}`;
   const list = layout === "list";
   return (
-    <article className={`group card relative overflow-hidden transition hover:shadow-[var(--shadow-lift)] ${list ? "flex flex-col sm:flex-row" : "flex flex-col"} ${l.isFeatured ? "ring-1 ring-gold-300" : ""}`}>
+    <article className={`group card relative overflow-hidden transition-all duration-300 hover:shadow-[var(--shadow-lift)] hover:-translate-y-0.5 content-auto transform-gpu ${list ? "flex flex-col sm:flex-row" : "flex flex-col"} ${l.isFeatured ? "ring-1 ring-gold-300" : ""}`}>
       <Link href={href} className={`relative block overflow-hidden bg-slate-100 ${list ? "aspect-[4/3] sm:aspect-auto sm:w-[340px] sm:shrink-0" : "aspect-[4/3]"}`} aria-label={l.title}>
         {l.coverUrl ? (
           <Image src={l.coverUrl} alt={l.title} fill sizes={list ? "(min-width: 640px) 340px, 100vw" : "(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"} className="object-cover transition duration-500 group-hover:scale-[1.04]" priority={priority} />

@@ -16,14 +16,21 @@ export function DesktopNav() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => setOpen(null), [path]);
   return (
-    <nav className="ms-4 hidden items-center lg:flex" aria-label="Main">
+    <nav className="ms-2 hidden items-center lg:flex xl:ms-4 shrink min-w-0" aria-label="Main">
       {NAV.map((item, i) => {
         const active = path === item.href || path.startsWith(item.href + "/");
-        const hiddenOnLg = i >= 7 ? "hidden 2xl:block" : i >= 5 ? "hidden xl:block" : "";
+        const hiddenOnLg =
+          i >= 8
+            ? "hidden min-[1800px]:block"
+            : i >= 7
+              ? "hidden 2xl:block"
+              : i >= 5
+                ? "hidden xl:block"
+                : "";
         return (
           <div
             key={item.label}
-            className={`relative ${hiddenOnLg}`}
+            className={`relative shrink-0 ${hiddenOnLg}`}
             onMouseEnter={() => {
               if (timer.current) clearTimeout(timer.current);
               setOpen(item.label);
@@ -34,7 +41,7 @@ export function DesktopNav() {
           >
             <Link
               href={item.href}
-              className={`flex items-center gap-0.5 rounded-lg px-2 py-2 text-[13px] font-semibold uppercase tracking-wide transition ${active ? "text-brand-700" : "text-slate-700 hover:text-brand-700"}`}
+              className={`flex items-center gap-0.5 rounded-lg px-1.5 py-2 text-[12px] xl:px-2 xl:text-[13px] font-semibold uppercase tracking-wide transition ${active ? "text-brand-700" : "text-slate-700 hover:text-brand-700"}`}
               onFocus={() => setOpen(item.label)}
             >
               {t(item.label)}
@@ -66,9 +73,10 @@ export function DesktopNav() {
       {[
         { cls: "xl:hidden", from: 5 },
         { cls: "hidden xl:block 2xl:hidden", from: 7 },
+        { cls: "hidden 2xl:block min-[1800px]:hidden", from: 8 },
       ].map((m) => (
-        <div key={m.from} className={`relative ${m.cls}`} onMouseEnter={() => setOpen(`more${m.from}`)} onMouseLeave={() => setOpen(null)}>
-          <button className="flex items-center gap-0.5 rounded-lg px-2.5 py-2 text-[13px] font-semibold uppercase tracking-wide text-slate-700">
+        <div key={m.from} className={`relative shrink-0 ${m.cls}`} onMouseEnter={() => setOpen(`more${m.from}`)} onMouseLeave={() => setOpen(null)}>
+          <button className="flex items-center gap-0.5 rounded-lg px-2 py-2 text-[12px] xl:px-2.5 xl:text-[13px] font-semibold uppercase tracking-wide text-slate-700 hover:text-brand-700">
             {t("More")} <ChevronDown className="h-3.5 w-3.5 opacity-60" />
           </button>
           {open === `more${m.from}` && (

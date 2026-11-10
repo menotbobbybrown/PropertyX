@@ -124,11 +124,11 @@ export default async function HomePage() {
 
       {/* TRUST STRIP (THE 4 PILLARS THAT SURPASS ZAMEEN) */}
       <section className="border-b border-slate-200 bg-white">
-        <div className="container-px grid gap-4 py-5 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
-          <p className="flex items-center gap-2.5 font-medium"><ShieldCheck className="h-5 w-5 text-brand-600 shrink-0" /> {t("Verified Title Deeds (Zero Ghost Ads)")}</p>
-          <p className="flex items-center gap-2.5 font-medium"><Lock className="h-5 w-5 text-emerald-600 shrink-0" /> {t("Digital Bayana (100% Escrow Refund Guarantee)")}</p>
-          <p className="flex items-center gap-2.5 font-medium"><LineChart className="h-5 w-5 text-gold-600 shrink-0" /> {t("Hedonic AVM (Transparent Price CI Ranges)")}</p>
-          <p className="flex items-center gap-2.5 font-medium"><MessageCircle className="h-5 w-5 text-[#25D366] shrink-0" /> {t("WhatsApp-Native (Direct Verified Chat)")}</p>
+        <div className="container-px grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 py-4 sm:py-5 text-xs lg:text-sm text-slate-700">
+          <p className="flex items-center gap-2 font-medium tracking-tight"><ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5 text-brand-600 shrink-0" /> <span>{t("Verified Title Deeds (Zero Ghost Ads)")}</span></p>
+          <p className="flex items-center gap-2 font-medium tracking-tight"><Lock className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 shrink-0" /> <span>{t("Digital Bayana (100% Escrow Refund Guarantee)")}</span></p>
+          <p className="flex items-center gap-2 font-medium tracking-tight"><LineChart className="h-4 w-4 sm:h-5 sm:w-5 text-gold-600 shrink-0" /> <span>{t("Hedonic AVM (Transparent Price CI Ranges)")}</span></p>
+          <p className="flex items-center gap-2 font-medium tracking-tight"><MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-[#25D366] shrink-0" /> <span>{t("WhatsApp-Native (Direct Verified Chat)")}</span></p>
         </div>
       </section>
 

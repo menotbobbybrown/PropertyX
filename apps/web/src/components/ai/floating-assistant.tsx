@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUp, Expand, Loader2, MapPin, MessageCircle, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowUp, Expand, Loader2, MapPin, RotateCcw, Sparkles, X } from "lucide-react";
 import { formatArea, formatPKR, isUAE } from "@propertyx/shared";
 import { api } from "@/lib/client";
 import { useT } from "../i18n";
@@ -42,6 +42,23 @@ export function FloatingAssistant() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Listen for WhatsApp open event to cleanly close AI assistant
+  useEffect(() => {
+    const handleClose = () => setOpen(false);
+    window.addEventListener("px:close-ai-assistant", handleClose);
+    return () => window.removeEventListener("px:close-ai-assistant", handleClose);
+  }, []);
+
+  const toggleOpen = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        window.dispatchEvent(new CustomEvent("px:close-whatsapp"));
+      }
+      return next;
+    });
+  };
+
   const send = async (text: string) => {
     const t = text.trim();
     if (!t || busy) return;
@@ -73,7 +90,7 @@ export function FloatingAssistant() {
   return (
     <>
       {open && (
-        <div role="dialog" aria-label="AI property assistant" className="fixed inset-x-2 bottom-[4.75rem] top-20 z-50 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-24 md:end-6 md:top-auto md:h-[min(600px,calc(100dvh-8rem))] md:w-[400px]">
+        <div role="dialog" aria-label="AI property assistant" className="fixed inset-x-2 bottom-4 top-20 z-50 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl md:inset-x-auto md:bottom-[5.5rem] md:end-6 md:top-auto md:h-[min(600px,calc(100dvh-8rem))] md:w-[400px] transform-gpu will-change-transform">
           <div className="flex items-center gap-3 bg-gradient-to-br from-brand-700 to-brand-900 px-4 py-3 text-white">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
               <Sparkles className="h-5 w-5" />
@@ -177,13 +194,14 @@ export function FloatingAssistant() {
       )}
 
       <button
-        onClick={() => setOpen((o) => !o)}
-        className={`fixed bottom-[4.75rem] end-4 z-50 items-center gap-2 ${open ? "hidden md:flex" : "flex"} rounded-full bg-brand-700 py-3 ps-3.5 pe-4 font-semibold text-white shadow-xl ring-4 ring-white transition hover:bg-brand-800 md:bottom-6 md:end-6`}
+        onClick={toggleOpen}
+        className={`fixed bottom-[4.75rem] end-4 z-40 items-center gap-2 ${open ? "hidden md:flex" : "flex"} rounded-full bg-brand-800 hover:bg-brand-900 py-2.5 px-3.5 sm:py-3 sm:px-4 font-semibold text-white shadow-xl ring-4 ring-white transition-all transform hover:scale-105 active:scale-95 md:bottom-[5.5rem] md:end-6 transform-gpu will-change-transform`}
         aria-label={t(open ? "Close AI assistant" : "Open AI assistant")}
         aria-expanded={open}
+        title={t("Ask AI")}
       >
-        {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
-        <span className="text-sm">{t(open ? "Close" : "Ask AI")}</span>
+        {open ? <X className="h-5 w-5" /> : <Sparkles className="h-5 w-5 text-gold-300" />}
+        <span className="text-xs sm:text-sm">{t(open ? "Close" : "Ask AI")}</span>
       </button>
     </>
   );

@@ -46,10 +46,13 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
   body {
     @apply bg-white text-slate-800 antialiased;
     font-feature-settings: "cv11", "ss01";
+    overflow-x: hidden;
+    min-height: 100dvh;
   }
   ::selection {
     @apply bg-brand-200 text-brand-950;
@@ -133,6 +136,20 @@
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
+}
+
+@utility transform-gpu {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+@utility will-change-transform {
+  will-change: transform;
+}
+
+@utility content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 400px;
 }
 
 .leaflet-container { font-family: inherit; }
