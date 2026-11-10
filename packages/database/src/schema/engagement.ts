@@ -1,9 +1,10 @@
 import { pgTable, text, uuid, integer, boolean, timestamp, index, bigint, jsonb, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
-import { id, createdAt, updatedAt, isSeed } from "./_helpers";
+import { id, createdAt, updatedAt, isSeed, numericNumber } from "./_helpers";
 import { users } from "./identity";
+import { cities } from "./locations";
 import { propertyListings } from "./properties";
 import { projects, agents, agencies, developers } from "./organizations";
-import { leadStatusEnum, leadSourceEnum, appointmentStatusEnum, messageKindEnum, reviewStatusEnum } from "./enums";
+import { leadStatusEnum, leadSourceEnum, appointmentStatusEnum, messageKindEnum, reviewStatusEnum, purposeEnum, propertyTypeEnum, areaUnitEnum } from "./enums";
 
 export const leads = pgTable(
   "leads",
@@ -201,4 +202,55 @@ export const reviews = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [index("reviews_target_idx").on(t.targetType, t.targetId, t.status), uniqueIndex("reviews_author_target_uq").on(t.authorId, t.targetType, t.targetId)],
+);
+
+export const propertyRequirements = pgTable(
+  "property_requirements",
+  {
+    id: id(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    phone: text("phone").notNull(),
+    email: text("email"),
+    cityId: uuid("city_id").references(() => cities.id),
+    cityName: text("city_name").notNull(),
+    locationName: text("location_name").notNull(),
+    propertyType: propertyTypeEnum("property_type").notNull(),
+    purpose: purposeEnum("purpose").notNull().default("sale"),
+    minBudget: bigint("min_budget", { mode: "number" }),
+    maxBudget: bigint("max_budget", { mode: "number" }).notNull(),
+    areaValue: numericNumber("area_value", { precision: 12, scale: 2 }),
+    areaUnit: areaUnitEnum("area_unit"),
+    description: text("description").notNull(),
+    status: text("status").notNull().default("active"),
+    isDirectBuyer: boolean("is_direct_buyer").notNull().default(true),
+    pitchesCount: integer("pitches_count").notNull().default(0),
+    isSeed: isSeed(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("req_city_idx").on(t.cityName),
+    index("req_type_idx").on(t.propertyType),
+    index("req_status_idx").on(t.status),
+    index("req_created_idx").on(t.createdAt),
+  ],
+);
+
+export const requirementPitches = pgTable(
+  "requirement_pitches",
+  {
+    id: id(),
+    requirementId: uuid("requirement_id").notNull().references(() => propertyRequirements.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").references(() => agents.id, { onDelete: "set null" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    listingId: uuid("listing_id").references(() => propertyListings.id, { onDelete: "set null" }),
+    pitchText: text("pitch_text").notNull(),
+    offeredPrice: bigint("offered_price", { mode: "number" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("pitch_req_idx").on(t.requirementId),
+    index("pitch_agent_idx").on(t.agentId),
+  ],
 );

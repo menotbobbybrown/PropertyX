@@ -45,6 +45,7 @@ const PK_NAV: NavItem[] = [
   { label: "Commercial", href: "/commercial-property", columns: [{ title: "Commercial", links: [{ label: "Offices", href: "/buy/office" }, { label: "Shops", href: "/buy/shop" }, { label: "Warehouses", href: "/buy/warehouse" }, { label: "Factories", href: "/buy/factory" }, { label: "Buildings", href: "/buy/building" }, { label: "Commercial for rent", href: "/rent/commercial" }] }] },
   { label: "Agents", href: "/agents", columns: [{ title: "Find professionals", links: [{ label: "Property agents", href: "/agents" }, { label: "Agencies", href: "/agencies" }, { label: "Developers", href: "/developers" }] }] },
   { label: "Invest", href: "/invest", columns: [{ title: "Investing", links: [{ label: "Investment opportunities", href: "/invest" }, { label: "AI investment advisor", href: "/tools/investment" }, { label: "Price index", href: "/price-index" }, { label: "Installment projects", href: "/invest#installments" }] }] },
+  { label: "Wanted", href: "/wanted" },
   { label: "Areas", href: "/areas", columns: [{ title: "Area guides", links: [{ label: "All areas", href: "/areas" }, { label: "DHA Lahore", href: "/area/dha-lahore" }, { label: "Bahria Town Lahore", href: "/area/bahria-town-lahore" }, { label: "Gulberg Lahore", href: "/area/gulberg-lahore" }, { label: "F-11 Islamabad", href: "/area/f-11-islamabad" }, { label: "DHA Karachi", href: "/area/dha-karachi" }] }] },
   { label: "Map", href: "/map" },
   {
@@ -104,6 +105,7 @@ const AE_NAV: NavItem[] = [
   { label: "Commercial", href: "/commercial-property", columns: [{ title: "Commercial", links: [{ label: "Offices", href: "/buy/office" }, { label: "Shops", href: "/buy/shop" }, { label: "Warehouses", href: "/buy/warehouse" }, { label: "Buildings", href: "/buy/building" }, { label: "Commercial for rent", href: "/rent/commercial" }] }] },
   { label: "Agents", href: "/agents", columns: [{ title: "Find professionals", links: [{ label: "Property agents", href: "/agents" }, { label: "Agencies", href: "/agencies" }, { label: "Developers", href: "/developers" }] }] },
   { label: "Invest", href: "/invest", columns: [{ title: "Investing", links: [{ label: "Investment opportunities", href: "/invest" }, { label: "AI investment advisor", href: "/tools/investment" }, { label: "Price index", href: "/price-index" }, { label: "Payment-plan projects", href: "/invest#installments" }] }] },
+  { label: "Wanted", href: "/wanted" },
   { label: "Areas", href: "/areas", columns: [{ title: "Area guides", links: [{ label: "All areas", href: "/areas" }, { label: "Dubai Marina", href: "/area/dubai-marina" }, { label: "Downtown Dubai", href: "/area/downtown-dubai" }, { label: "Business Bay", href: "/area/business-bay-dubai" }, { label: "Jumeirah Village Circle", href: "/area/jumeirah-village-circle-dubai" }, { label: "Al Reem Island", href: "/area/al-reem-island-abu-dhabi" }] }] },
   { label: "Map", href: "/map" },
   {

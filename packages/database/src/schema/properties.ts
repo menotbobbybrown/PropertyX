@@ -33,6 +33,9 @@ export const properties = pgTable(
     yearBuilt: integer("year_built"),
     furnishing: furnishingEnum("furnishing"),
     condition: conditionEnum("condition"),
+    plotNumber: text("plot_number"),
+    streetNumber: text("street_number"),
+    blockName: text("block_name"),
     isSeed: isSeed(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -46,6 +49,7 @@ export const properties = pgTable(
     index("properties_sqft_idx").on(t.areaSqft),
     index("properties_geo_idx").on(t.lat, t.lng),
     index("properties_owner_idx").on(t.ownerId),
+    index("properties_plot_cadastral_idx").on(t.societyId, t.blockName, t.plotNumber),
   ],
 );
 

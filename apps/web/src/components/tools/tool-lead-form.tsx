@@ -8,12 +8,12 @@ import { FieldError, FormError } from "../modal";
 
 const COPY: Record<ToolLeadKind, { title: string; text: string; button: string; placeholder: string }> = {
   home_loan: {
-    title: isUAE ? "Get mortgage pre-approval help" : "Get help with home financing",
+    title: isUAE ? "1-Click Bank Mortgage Pre-Approval Desk" : "1-Click Bank Home Financing Pre-Approval",
     text: isUAE
-      ? "A mortgage adviser can compare rates from UAE banks for these numbers and help you get pre-approved. Free, no obligation."
-      : "Our team can compare home-financing offers from banks for these numbers and guide you through the application. Free, no obligation.",
-    button: "Request a call back",
-    placeholder: isUAE ? "e.g. salaried, AED 30,000 a month, buying in the next 3 months" : "e.g. salaried, buying in the next 3 months",
+      ? "Direct routing to licensed UAE mortgage desks (Emirates NBD, ADCB, FAB, DIB) to lock the lowest profit margin and issue your pre-approval letter within 48 hours."
+      : "Direct routing to top Pakistani Islamic & conventional home finance desks (Meezan Easy Home, HBL Islamic, Bank Alfalah, DIB). Get pre-approved with minimal paperwork.",
+    button: isUAE ? "Apply for Mortgage Pre-Approval" : "Apply for Bank Pre-Approval",
+    placeholder: isUAE ? "e.g. Salaried AED 35k/mo, looking at Dubai Hills" : "e.g. Salaried / Business PKR 400k/mo, buying in DHA Lahore",
   },
   buying_costs: {
     title: "Talk to someone about the costs",
@@ -54,6 +54,7 @@ export function ToolLeadForm({ tool, context }: { tool: ToolLeadKind; context: R
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [employment, setEmployment] = useState("Salaried");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>(null);
@@ -89,6 +90,15 @@ export function ToolLeadForm({ tool, context }: { tool: ToolLeadKind; context: R
     <div className="mt-6 rounded-2xl border border-brand-100 bg-brand-50/60 p-4">
       <p className="font-bold text-slate-900">{c.title}</p>
       <p className="mt-1 text-sm text-slate-600">{c.text}</p>
+      {tool === "home_loan" && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+          <span className="text-slate-400">Partner Desks:</span>
+          <span className="rounded-md bg-white px-2 py-0.5 border border-slate-200">Meezan Bank</span>
+          <span className="rounded-md bg-white px-2 py-0.5 border border-slate-200">HBL Islamic</span>
+          <span className="rounded-md bg-white px-2 py-0.5 border border-slate-200">Bank Alfalah</span>
+          <span className="rounded-md bg-white px-2 py-0.5 border border-slate-200">Dubai Islamic Bank</span>
+        </div>
+      )}
       {!open ? (
         <button type="button" className="btn-primary mt-3" onClick={() => setOpen(true)}>
           <PhoneCall className="h-4 w-4" /> {c.button}
@@ -101,7 +111,8 @@ export function ToolLeadForm({ tool, context }: { tool: ToolLeadKind; context: R
             setBusy(true);
             setErr(null);
             try {
-              await api("/api/v1/tool-leads", { body: { tool, name, phone, email, message, context } });
+              const fullContext = tool === "home_loan" ? { ...context, Employment: employment } : context;
+              await api("/api/v1/tool-leads", { body: { tool, name, phone, email, message, context: fullContext } });
               setDone(true);
             } catch (e2) {
               setErr(e2);
@@ -122,6 +133,21 @@ export function ToolLeadForm({ tool, context }: { tool: ToolLeadKind; context: R
               <FieldError msg={fieldError(err, "phone")} />
             </div>
           </div>
+          {tool === "home_loan" && (
+            <div>
+              <label className="label" htmlFor={`tl-emp-${tool}`}>Employment & Income Status</label>
+              <select
+                id={`tl-emp-${tool}`}
+                className="input"
+                value={employment}
+                onChange={(e) => setEmployment(e.target.value)}
+              >
+                <option value="Salaried (Resident)">Salaried (Pakistani Resident)</option>
+                <option value="Business / Self-Employed">Business Owner / Self-Employed</option>
+                <option value="Overseas Pakistani (NRP)">Overseas Pakistani (NRP / Roshan Digital)</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="label" htmlFor={`tl-email-${tool}`}>Email (optional)</label>
             <input id={`tl-email-${tool}`} className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />

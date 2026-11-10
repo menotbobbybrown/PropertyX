@@ -83,6 +83,11 @@ const agentProfileSchema = z.object({
   specializations: z.array(z.string().max(40)).max(8).default([]),
   languages: z.array(z.string().max(20)).max(6).default([]),
   areaSlugs: z.array(z.string()).max(10).default([]),
+  associationName: z.string().trim().max(100).optional().nullable(),
+  associationNumber: z.string().trim().max(60).optional().nullable(),
+  fbrNtn: z.string().trim().max(30).optional().nullable(),
+  officeAddress: z.string().trim().max(250).optional().nullable(),
+  officePhone: z.string().trim().max(40).optional().nullable(),
 });
 
 export async function upsertAgentProfile(db: Database, actor: Actor | null, raw: unknown) {
@@ -92,7 +97,20 @@ export async function upsertAgentProfile(db: Database, actor: Actor | null, raw:
   if (!parsed.success) throw badRequest("Check your profile details", parsed.error.flatten());
   const d = parsed.data;
   const existing = await getMyAgentProfile(db, actor);
-  const values = { displayName: d.displayName, bio: d.bio, experienceYears: d.experienceYears ?? null, phone: d.phone, whatsapp: d.whatsapp || d.phone, specializations: d.specializations, languages: d.languages };
+  const values = {
+    displayName: d.displayName,
+    bio: d.bio,
+    experienceYears: d.experienceYears ?? null,
+    phone: d.phone,
+    whatsapp: d.whatsapp || d.phone,
+    specializations: d.specializations,
+    languages: d.languages,
+    associationName: d.associationName ?? null,
+    associationNumber: d.associationNumber ?? null,
+    fbrNtn: d.fbrNtn ?? null,
+    officeAddress: d.officeAddress ?? null,
+    officePhone: d.officePhone ?? null,
+  };
   let id: string;
   if (existing) {
     await db.update(s.agents).set(values).where(eq(s.agents.id, existing.id));

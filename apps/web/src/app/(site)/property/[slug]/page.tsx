@@ -219,6 +219,37 @@ export default async function PropertyPage({ params }: Props) {
             <ReadMore text={l.description} />
           </section>
 
+          {(p.plotNumber || p.blockName || p.streetNumber) && (
+            <section className="card p-6 border-brand-100 bg-brand-50/20">
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-slate-900">
+                <ShieldCheck className="h-5 w-5 text-brand-700" /> Cadastral & Registry Record
+              </h2>
+              <p className="mb-4 text-sm text-slate-500">
+                Cross-referenced with society layout plans to verify unique plot existence and prevent duplicate broker claims.
+              </p>
+              <dl className="grid gap-4 grid-cols-2 sm:grid-cols-3">
+                {p.plotNumber && (
+                  <div>
+                    <dt className="text-xs text-slate-500">Plot / Unit #</dt>
+                    <dd className="font-mono font-bold text-slate-900">{p.plotNumber}</dd>
+                  </div>
+                )}
+                {p.blockName && (
+                  <div>
+                    <dt className="text-xs text-slate-500">Block / Sector</dt>
+                    <dd className="font-semibold text-slate-900">{p.blockName}</dd>
+                  </div>
+                )}
+                {p.streetNumber && (
+                  <div>
+                    <dt className="text-xs text-slate-500">Street / Road</dt>
+                    <dd className="font-semibold text-slate-900">{p.streetNumber}</dd>
+                  </div>
+                )}
+              </dl>
+            </section>
+          )}
+
           {isUAE && (det.permitNumber || det.brn || det.orn) && (
             <section className="card p-6">
               <h2 className="mb-1 flex items-center gap-2 text-lg font-bold">
@@ -304,6 +335,11 @@ export default async function PropertyPage({ params }: Props) {
               <div className="min-w-0">
                 <p className="truncate font-semibold text-slate-900">{d.agent?.displayName ?? l.contactName}</p>
                 <p className="truncate text-sm text-slate-500">{d.agent?.agencyName ?? (d.agent ? "Independent agent" : "Owner")}</p>
+                {d.agent?.associationName && (
+                  <p className="truncate text-xs font-semibold text-emerald-700 mt-0.5">
+                    ✓ {d.agent.associationName} {d.agent.associationNumber ? `#${d.agent.associationNumber}` : "Member"}
+                  </p>
+                )}
                 <div className="mt-1 flex gap-1">
                   {d.agent && <VerificationBadge level={d.agent.verificationLevel} kind="agent" />}
                   {!d.agent && d.poster && <VerificationBadge level={d.poster.verificationLevel} kind="profile" />}

@@ -43,6 +43,13 @@
       "when": 1791939292609,
       "tag": "0005_tool_leads",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791945000000,
+      "tag": "0006_cadastral_agent_wanted",
+      "breakpoints": true
     }
   ]
 }

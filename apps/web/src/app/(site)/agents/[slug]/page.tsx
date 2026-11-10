@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { BadgeCheck, Clock, Languages, MapPin } from "lucide-react";
+import { BadgeCheck, Clock, Languages, MapPin, ShieldCheck, Building2, FileText, Phone } from "lucide-react";
 import { getAgentProfile } from "@propertyx/core";
 import { agencyPath, areaPath } from "@propertyx/shared";
 import { db, getUser } from "@/lib/server";
@@ -59,6 +59,56 @@ export default async function AgentPage({ params }: Props) {
             <Stat label="Rented" value={String(stats.rented)} />
             <Stat label="Experience" value={a.experienceYears != null ? `${a.experienceYears} yrs` : "—"} />
           </div>
+
+          {(a.associationName || a.fbrNtn || a.officeAddress || a.verificationLevel >= 2) && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-emerald-700" />
+                <h2 className="font-bold text-emerald-950">Verified Professional Credentials</h2>
+              </div>
+              <p className="mt-1 text-xs text-emerald-800">
+                Verified against government & professional association registries to protect property buyers and overseas investors from phantom listings.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 text-xs">
+                {a.associationName && (
+                  <div className="flex items-start gap-2 rounded-xl bg-white/80 p-2.5 border border-emerald-100">
+                    <Building2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-slate-900">{a.associationName}</p>
+                      <p className="text-slate-500">Reg #{a.associationNumber || "Active Member"}</p>
+                    </div>
+                  </div>
+                )}
+                {a.fbrNtn && (
+                  <div className="flex items-start gap-2 rounded-xl bg-white/80 p-2.5 border border-emerald-100">
+                    <FileText className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-slate-900">FBR Registered Taxpayer</p>
+                      <p className="text-slate-500">NTN: {a.fbrNtn}</p>
+                    </div>
+                  </div>
+                )}
+                {a.officeAddress && (
+                  <div className="flex items-start gap-2 rounded-xl bg-white/80 p-2.5 border border-emerald-100 sm:col-span-2">
+                    <MapPin className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-slate-900">Physical Brokerage Office</p>
+                      <p className="text-slate-500">{a.officeAddress}</p>
+                    </div>
+                  </div>
+                )}
+                {a.officePhone && (
+                  <div className="flex items-start gap-2 rounded-xl bg-white/80 p-2.5 border border-emerald-100">
+                    <Phone className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-slate-900">Office Landline</p>
+                      <p className="text-slate-500">{a.officePhone}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {a.bio && (
             <section>

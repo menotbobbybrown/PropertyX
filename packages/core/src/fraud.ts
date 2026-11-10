@@ -89,6 +89,28 @@ export async function scanListing(db: Database, listingId: string): Promise<{ sc
   if (textDupes[0] && Number(textDupes[0].sim) > 0.9)
     findings.push({ rule: "duplicate_listing", severity: "medium", score: 25, summary: `Description is ${Math.round(Number(textDupes[0].sim) * 100)}% similar to “${textDupes[0].title}” by another poster`, details: { listingId: textDupes[0].id } });
 
+  // 2.5 duplicate cadastral plot claim (same plot number in the same society & block by a different poster)
+  if (p.plotNumber && (p.societyId || p.blockId || p.blockName)) {
+    const plotMatches = await db.execute<{ id: string; title: string; plot_number: string }>(sql`
+      select ol.id, ol.title, op.plot_number from property_listings ol join properties op on op.id = ol.property_id
+      where ol.id <> ${l.id}
+        and lower(trim(op.plot_number)) = lower(trim(${p.plotNumber}))
+        and coalesce(op.society_id, op.area_id) is not distinct from ${p.societyId ?? p.areaId}
+        and coalesce(lower(trim(op.block_name)), '') = coalesce(lower(trim(${p.blockName ?? ''})), '')
+        and ol.posted_by_id is distinct from ${l.postedById}
+        and ol.status in ('active', 'pending_review')
+      limit 3`);
+    if (plotMatches[0]) {
+      findings.push({
+        rule: "duplicate_plot_claim",
+        severity: "high",
+        score: 45,
+        summary: `Plot #${p.plotNumber}${p.blockName ? ` Block ${p.blockName}` : ""} is already claimed by another listing “${plotMatches[0].title}”`,
+        details: { matches: plotMatches },
+      });
+    }
+  }
+
   // 3. suspicious price vs comparable listings (same city, type, purpose, size band)
   const comps = await db.execute<{ median: number; n: number }>(sql`
     select percentile_cont(0.5) within group (order by ol.price / nullif(op.area_sqft,0)) as median, count(*)::int as n

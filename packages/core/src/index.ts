@@ -17,3 +17,4 @@ export * from "./ads";
 export * from "./accounts";
 export * from "./admin";
 export * from "./jobs";
+export * from "./wanted";
