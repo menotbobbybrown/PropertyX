@@ -202,6 +202,8 @@ export interface ValuationInput {
   floor?: number | null;
   corner?: boolean;
   parkFacing?: boolean;
+  mainBoulevard?: boolean;
+  westOpen?: boolean;
   purpose?: "sale" | "rent";
 }
 
@@ -231,7 +233,14 @@ export async function valueProperty(db: Database, v: ValuationInput) {
   const est = estimateValue(
     comps.map((c) => Number(c.ppsf)),
     sqft,
-    { condition: v.condition, corner: v.corner, parkFacing: v.parkFacing, floor: v.floor },
+    {
+      condition: v.condition,
+      corner: v.corner,
+      parkFacing: v.parkFacing,
+      mainBoulevard: v.mainBoulevard,
+      westOpen: v.westOpen,
+      floor: v.floor,
+    },
   );
   const cards = await createSearchEngine(db).cardsByIds(comps.slice(0, 6).map((c) => c.id as string), { anyStatus: true });
   return { input: v, sqft, scope, estimate: est, comparables: cards, isDemoData: !!(await getSetting<boolean>(db, "demo_mode")) };

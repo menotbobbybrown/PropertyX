@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Noto_Nastaliq_Urdu, Noto_Sans_Arabic } from "next/font/google";
 import { Toaster } from "@/components/toast";
+import { WhatsAppWidget } from "@/components/whatsapp-widget";
 import { publicAppUrl, COUNTRY } from "@propertyx/shared";
 import { LangProvider } from "@/components/i18n";
 import { getLang } from "@/lib/i18n-server";
@@ -34,6 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-dvh">
         <LangProvider lang={lang}>
           {children}
+          <WhatsAppWidget />
           <Toaster />
         </LangProvider>
       </body>

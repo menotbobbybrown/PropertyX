@@ -44,9 +44,16 @@ export function PropertyCard({ l, saved = false, layout = "grid", priority = fal
         <SaveButton listingId={l.id} initial={saved} />
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <p className="text-xl font-extrabold text-slate-900">{priceLabel(l)}</p>
-          {reduced && l.previousPrice && <p className="text-xs text-slate-500 line-through">{formatPKR(l.previousPrice)}</p>}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <p className="text-xl font-extrabold text-slate-900">{priceLabel(l)}</p>
+            {reduced && l.previousPrice && <p className="text-xs text-slate-500 line-through">{formatPKR(l.previousPrice)}</p>}
+          </div>
+          {l.areaValue > 0 && l.purpose === "sale" && (
+            <span className="text-xs font-semibold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md">
+              {formatPKR(Math.round(l.price / l.areaValue))}/{l.areaUnit}
+            </span>
+          )}
         </div>
         {l.verificationLevel > 0 && (
           <div className="mt-1.5">
@@ -82,8 +89,11 @@ export function PropertyCard({ l, saved = false, layout = "grid", priority = fal
             {l.agencyName ? ` · ${l.agencyName}` : ""}
           </p>
         )}
-        <div className="mt-auto pt-3">
+        <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-50">
           <CompareToggle id={l.id} title={l.title} />
+          <Link href={href} className="text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors">
+            View Details →
+          </Link>
         </div>
       </div>
     </article>

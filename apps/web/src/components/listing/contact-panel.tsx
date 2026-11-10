@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, MessageCircle, MessageSquare, CalendarDays, HandCoins, Share2, Flag, Loader2, Info } from "lucide-react";
+import { Phone, MessageCircle, MessageSquare, CalendarDays, HandCoins, Share2, Flag, Loader2, Info, ShieldCheck } from "lucide-react";
 import { REPORT_REASONS, formatPKR, COUNTRY } from "@propertyx/shared";
 import { api, ApiError, anonId, fieldError } from "@/lib/client";
 import { Modal, FieldError, FormError } from "../modal";
@@ -30,7 +30,7 @@ const track = (listingId: string, type: string) => fetch(`/api/v1/listings/${lis
 export function ContactPanel(p: ContactProps) {
   const router = useRouter();
   const [showPhone, setShowPhone] = useState(false);
-  const [modal, setModal] = useState<null | "visit" | "offer" | "enquiry" | "report">(null);
+  const [modal, setModal] = useState<null | "visit" | "offer" | "enquiry" | "report" | "escrow">(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>(null);
   const loginFirst = () => router.push(`/login?next=${encodeURIComponent(`/property/${p.slug}`)}`);
@@ -120,7 +120,13 @@ export function ContactPanel(p: ContactProps) {
           </button>
         )}
         <a
-          href={contactsDisabled || !p.active ? undefined : `https://wa.me/${waNumber}?text=${encodeURIComponent(`Hi, I saw “${p.title}” on Bismillah. Is it available?`)}`}
+          href={
+            contactsDisabled || !p.active
+              ? undefined
+              : `https://wa.me/${waNumber}?text=${encodeURIComponent(
+                  `Assalam-o-Alaikum ${p.contactName ? p.contactName.split(" ")[0] : ""}, I saw your listing "${p.title}" on PropertyX (Price: ${formatPKR(p.price)}). Is this still available? Ref: /property/${p.slug}`
+                )}`
+          }
           target="_blank"
           rel="noopener noreferrer"
           aria-disabled={contactsDisabled}
@@ -151,6 +157,15 @@ export function ContactPanel(p: ContactProps) {
           <HandCoins className="h-4 w-4" /> Make Offer
         </button>
       </div>
+      {p.purpose === "sale" && (
+        <button
+          className="btn w-full bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm flex items-center justify-center gap-2 py-2.5"
+          disabled={!p.active}
+          onClick={() => (p.user ? setModal("escrow") : loginFirst())}
+        >
+          <ShieldCheck className="h-4 w-4" /> Reserve Property (Escrow Token)
+        </button>
+      )}
       <button className="btn-ghost w-full text-brand-700" disabled={!p.active} onClick={() => setModal("enquiry")}>
         <CalendarDays className="h-4 w-4" /> Schedule a viewing call-back
       </button>
@@ -177,6 +192,7 @@ export function ContactPanel(p: ContactProps) {
         onSubmit={(v) => submit(() => api("/api/v1/leads", { body: { ...v, listingId: p.listingId } }), modal === "offer" ? "Offer sent to the seller" : "Request sent. The seller will call you back.")}
       />
       <ReportModal open={modal === "report"} onClose={() => setModal(null)} busy={busy} err={err} onSubmit={(v) => submit(() => api("/api/v1/reports", { body: { ...v, targetType: "listing", targetId: p.listingId } }), "Thanks — our Trust & Safety team will review this.")} />
+      <EscrowModal open={modal === "escrow"} onClose={() => setModal(null)} listingId={p.listingId} title={p.title} price={p.price} />
     </div>
   );
 }
@@ -314,6 +330,129 @@ export function ReportModal({ open, onClose, onSubmit, busy, err }: { open: bool
           Submit report
         </button>
       </form>
+    </Modal>
+  );
+}
+
+function EscrowModal({
+  open,
+  onClose,
+  listingId,
+  title,
+  price,
+}: {
+  open: boolean;
+  onClose: () => void;
+  listingId: string;
+  title: string;
+  price: number;
+}) {
+  const [gateway, setGateway] = useState("sandbox");
+  const [amount, setAmount] = useState(50000);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const startEscrow = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await api<{
+        action: { type: string; url: string; fields?: Record<string, string> };
+      }>("/api/v1/payments/checkout", {
+        body: {
+          purpose: "token_deposit",
+          referenceId: listingId,
+          gateway,
+          amount,
+        },
+      });
+
+      if (res.action.type === "redirect") {
+        window.location.href = res.action.url;
+      } else if (res.action.type === "form_post") {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = res.action.url;
+        for (const [k, v] of Object.entries(res.action.fields || {})) {
+          const inp = document.createElement("input");
+          inp.type = "hidden";
+          inp.name = k;
+          inp.value = v;
+          form.appendChild(inp);
+        }
+        document.body.appendChild(form);
+        form.submit();
+      }
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Reserve with Escrow Token (Digital Bayana)">
+      <div className="space-y-4 text-sm text-slate-700">
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 space-y-1.5">
+          <p className="font-bold flex items-center gap-1.5 text-emerald-800">
+            <ShieldCheck className="h-4 w-4" /> 100% Escrow Guarantee
+          </p>
+          <p>
+            Your deposit is held securely in PropertyX escrow. The property is placed on an exclusive <strong>7-day reserve hold</strong> while title deeds and legal allotment documents are verified.
+          </p>
+          <p className="text-emerald-700 font-medium">
+            Full instant refund if the property documents show any legal defects, stay orders, or title mismatch.
+          </p>
+        </div>
+
+        <div>
+          <label className="label">Token Deposit Amount (PKR)</label>
+          <select
+            className="input font-semibold"
+            value={amount}
+            onChange={(e) => setAmount(Number(e.target.value))}
+          >
+            <option value={25000}>PKR 25,000 (Initial Token)</option>
+            <option value={50000}>PKR 50,000 (Standard 7-Day Hold)</option>
+            <option value={100000}>PKR 100,000 (Firm Bayana Hold)</option>
+          </select>
+          <p className="mt-1 text-xs text-slate-500">{title} — Asking: {formatPKR(price)}</p>
+        </div>
+
+        <div>
+          <label className="label">Payment Method</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: "jazzcash", name: "JazzCash" },
+              { id: "easypaisa", name: "Easypaisa" },
+              { id: "sandbox", name: "Test Wallet" },
+            ].map((gw) => (
+              <button
+                key={gw.id}
+                type="button"
+                onClick={() => setGateway(gw.id)}
+                className={`rounded-xl border p-2.5 text-xs font-semibold text-center transition-all ${
+                  gateway === gw.id
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-600"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {gw.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {err && <p className="text-xs text-red-600 font-medium">{err}</p>}
+
+        <button
+          onClick={startEscrow}
+          disabled={busy}
+          className="btn bg-emerald-600 hover:bg-emerald-700 text-white w-full py-3 flex items-center justify-center gap-2 font-semibold"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+          Proceed to Pay {formatPKR(amount)}
+        </button>
+      </div>
     </Modal>
   );
 }

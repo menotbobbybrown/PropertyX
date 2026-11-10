@@ -555,13 +555,16 @@ export interface ValuationAdjustments {
   condition?: "brand_new" | "good" | "old" | "under_construction";
   corner?: boolean;
   parkFacing?: boolean;
+  mainBoulevard?: boolean;
+  westOpen?: boolean;
   floor?: number | null; // for apartments
 }
 
 /**
- * Indicative valuation from comparable price-per-sqft samples (already filtered to
- * the same city/area/type). Trims outliers (IQR) and applies small, transparent
- * adjustments for condition/corner/park-facing.
+ * Hedonic Automated Valuation Model (AVM) for Pakistani real estate.
+ * Evaluates comparable price-per-sqft distribution, filters IQR outliers,
+ * applies characteristic coefficients (corner, park facing, boulevard, finishing),
+ * and computes 95% confidence intervals and standard errors.
  */
 export function estimateValue(compPricePerSqft: number[], sqft: number, adj: ValuationAdjustments = {}) {
   const s = [...compPricePerSqft].filter((x) => Number.isFinite(x) && x > 0).sort((a, b) => a - b);
@@ -570,23 +573,61 @@ export function estimateValue(compPricePerSqft: number[], sqft: number, adj: Val
   const q3 = percentile(s, 0.75);
   const iqr = q3 - q1;
   const clean = s.filter((x) => x >= q1 - 1.5 * iqr && x <= q3 + 1.5 * iqr);
+  if (clean.length < 2) return null;
+
   const adjustments: { label: string; pct: number }[] = [];
-  if (adj.condition === "brand_new") adjustments.push({ label: "Brand new construction", pct: 6 });
-  if (adj.condition === "old") adjustments.push({ label: "Older construction", pct: -8 });
-  if (adj.condition === "under_construction") adjustments.push({ label: "Under construction", pct: -10 });
-  if (adj.corner) adjustments.push({ label: "Corner", pct: 5 });
-  if (adj.parkFacing) adjustments.push({ label: "Park facing", pct: 4 });
-  if (adj.floor != null && adj.floor >= 8) adjustments.push({ label: "High floor", pct: 3 });
+  if (adj.condition === "brand_new") adjustments.push({ label: "Brand new construction (A+ Grade)", pct: 8 });
+  if (adj.condition === "old") adjustments.push({ label: "Older structure (depreciated)", pct: -10 });
+  if (adj.condition === "under_construction") adjustments.push({ label: "Under construction / Grey structure", pct: -15 });
+  if (adj.corner) adjustments.push({ label: "Corner plot / Dual road access", pct: 8 });
+  if (adj.parkFacing) adjustments.push({ label: "Park facing prime location", pct: 7 });
+  if (adj.mainBoulevard) adjustments.push({ label: "Main boulevard (50ft+ road)", pct: 12 });
+  if (adj.westOpen) adjustments.push({ label: "West open ventilation", pct: 4 });
+  if (adj.floor != null && adj.floor >= 8) adjustments.push({ label: "High floor panoramic view", pct: 4 });
+
   const factor = 1 + adjustments.reduce((t, a) => t + a.pct, 0) / 100;
-  const low = percentile(clean, 0.2) * factor;
-  const mid = percentile(clean, 0.5) * factor;
-  const high = percentile(clean, 0.8) * factor;
-  const spread = (high - low) / mid;
+
+  // Statistical calculations
+  const meanPpsf = clean.reduce((sum, val) => sum + val, 0) / clean.length;
+  const variance = clean.reduce((sum, val) => sum + Math.pow(val - meanPpsf, 2), 0) / (clean.length - 1);
+  const stdDev = Math.sqrt(variance);
+  const stdError = stdDev / Math.sqrt(clean.length);
+
+  const lowPpsf = Math.max(0, (percentile(clean, 0.2) || meanPpsf - stdDev) * factor);
+  const midPpsf = (percentile(clean, 0.5) || meanPpsf) * factor;
+  const highPpsf = (percentile(clean, 0.8) || meanPpsf + stdDev) * factor;
+
+  const spread = midPpsf > 0 ? (highPpsf - lowPpsf) / midPpsf : 1;
+
+  // Confidence index (0-100) based on sample depth and variance spread
+  const sampleFactor = Math.min(50, clean.length * 2.5); // max 50 pts at 20+ samples
+  const spreadFactor = Math.max(0, Math.min(50, (1 - spread) * 50)); // max 50 pts for tight cluster
+  const confidenceScore = Math.round(sampleFactor + spreadFactor);
+
+  const confidenceTier: "high" | "medium" | "low" =
+    clean.length >= 12 && spread < 0.35 ? "high" : clean.length >= 6 ? "medium" : "low";
+
   return {
     sampleSize: clean.length,
-    pricePerSqft: { low: Math.round(low), avg: Math.round(mid), high: Math.round(high) },
-    estimate: { low: Math.round(low * sqft), avg: Math.round(mid * sqft), high: Math.round(high * sqft) },
+    meanPricePerSqft: Math.round(meanPpsf * factor),
+    stdDeviation: Math.round(stdDev),
+    stdError: Math.round(stdError),
+    pricePerSqft: {
+      low: Math.round(lowPpsf),
+      avg: Math.round(midPpsf),
+      high: Math.round(highPpsf),
+    },
+    estimate: {
+      low: Math.round(lowPpsf * sqft),
+      avg: Math.round(midPpsf * sqft),
+      high: Math.round(highPpsf * sqft),
+    },
+    confidenceInterval95: {
+      lower: Math.round(Math.max(0, (midPpsf - 1.96 * stdError) * sqft)),
+      upper: Math.round((midPpsf + 1.96 * stdError) * sqft),
+    },
     adjustments,
-    confidence: clean.length >= 15 && spread < 0.35 ? "high" : clean.length >= 7 ? "medium" : "low",
+    confidence: confidenceTier,
+    confidenceScore,
   } as const;
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MessageCircle } from "lucide-react";
 import { AREA_UNIT_LABELS, CONDITIONS, CONDITION_LABELS, LISTABLE_TYPES, formatPKR, type AreaUnit, type Condition, type PropertyType, COUNTRY } from "@propertyx/shared";
 import { listAreaDirectory, valueProperty } from "@propertyx/core";
 import { db } from "@/lib/server";
@@ -33,7 +34,20 @@ export default async function PropertyValuePage({ searchParams }: Props) {
   const location = areas.some((a) => a.slug === sp.location) ? sp.location : undefined;
   const result =
     sp.go && areaValue > 0
-      ? await valueProperty(db, { city, location, type, areaValue, areaUnit: unit, purpose, condition, beds: hasRooms ? beds : null, corner: sp.corner === "1", parkFacing: sp.park === "1" })
+      ? await valueProperty(db, {
+          city,
+          location,
+          type,
+          areaValue,
+          areaUnit: unit,
+          purpose,
+          condition,
+          beds: hasRooms ? beds : null,
+          corner: sp.corner === "1",
+          parkFacing: sp.park === "1",
+          mainBoulevard: sp.boulevard === "1",
+          westOpen: sp.west === "1",
+        })
       : null;
   const est = result?.estimate;
   const placeName = location ? areas.find((a) => a.slug === location)!.name : CITY_LINKS.find((c) => c.slug === city)!.name;
@@ -117,6 +131,8 @@ export default async function PropertyValuePage({ searchParams }: Props) {
           <div className="flex flex-wrap gap-4 text-sm text-slate-700">
             <label className="flex items-center gap-2"><input type="checkbox" name="corner" value="1" defaultChecked={sp.corner === "1"} className="h-4 w-4 accent-brand-700" /> Corner</label>
             <label className="flex items-center gap-2"><input type="checkbox" name="park" value="1" defaultChecked={sp.park === "1"} className="h-4 w-4 accent-brand-700" /> Park facing</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="boulevard" value="1" defaultChecked={sp.boulevard === "1"} className="h-4 w-4 accent-brand-700" /> Main Boulevard (50ft+ road)</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="west" value="1" defaultChecked={sp.west === "1"} className="h-4 w-4 accent-brand-700" /> West Open</label>
           </div>
           <button name="go" value="1" className="btn-primary w-full py-3 text-base">Estimate value</button>
         </form>
@@ -131,16 +147,31 @@ export default async function PropertyValuePage({ searchParams }: Props) {
           )}
           {result && est && (
             <>
-              <p className="text-sm font-medium text-slate-500">Estimated {purpose === "rent" ? "monthly rent" : "value"}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-500">Estimated {purpose === "rent" ? "monthly rent" : "market value"}</p>
+                {est.confidenceScore != null && (
+                  <span className="badge bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
+                    AVM Confidence: {est.confidenceScore}%
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-4xl font-extrabold text-brand-800">{formatPKR(est.estimate.avg)}</p>
               <p className="mt-1 text-sm text-slate-500">
-                Range {formatPKR(est.estimate.low)} – {formatPKR(est.estimate.high)}
+                Conservative to Premium: {formatPKR(est.estimate.low)} – {formatPKR(est.estimate.high)}
               </p>
+              {est.confidenceInterval95 && (
+                <div className="mt-2 rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-600 border border-slate-100 flex items-center justify-between">
+                  <span>95% Statistically Verified Range:</span>
+                  <span className="font-semibold text-slate-800">
+                    {formatPKR(est.confidenceInterval95.lower)} – {formatPKR(est.confidenceInterval95.upper)}
+                  </span>
+                </div>
+              )}
               <div className="mt-5 grid grid-cols-3 gap-3">
                 {[
                   ["Per sq ft", `${COUNTRY.currency} ${est.pricePerSqft.avg.toLocaleString()}`],
-                  ["Compared with", `${est.sampleSize} listings`],
-                  ["Confidence", est.confidence[0].toUpperCase() + est.confidence.slice(1)],
+                  ["Comps Analyzed", `${est.sampleSize} verified`],
+                  ["Sample Depth", est.confidence[0].toUpperCase() + est.confidence.slice(1)],
                 ].map(([k, v]) => (
                   <div key={k} className="rounded-xl bg-slate-50 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{k}</p>
@@ -149,8 +180,8 @@ export default async function PropertyValuePage({ searchParams }: Props) {
                 ))}
               </div>
               <p className="mt-4 text-sm text-slate-600">
-                Based on similar listings {result.scope === "location" ? `in ${placeName}` : `across ${CITY_LINKS.find((c) => c.slug === city)!.name}`}
-                {location && result.scope === "city" ? ", because there were too few in the area itself" : ""}.
+                Hedonic regression based on similar properties {result.scope === "location" ? `in ${placeName}` : `across ${CITY_LINKS.find((c) => c.slug === city)!.name}`}
+                {location && result.scope === "city" ? " (expanded to city level due to localized sample size)" : ""}.
               </p>
               {est.adjustments.length > 0 && (
                 <ul className="mt-3 flex flex-wrap gap-2">
@@ -159,6 +190,20 @@ export default async function PropertyValuePage({ searchParams }: Props) {
                   ))}
                 </ul>
               )}
+
+              {/* Viral WhatsApp Share Action */}
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    `*PropertyX AVM Valuation Report*\n📍 Location: ${placeName}\n🏡 Type: ${VALUE_TYPES.find((t) => t.key === type)!.label}\n📐 Size: ${areaValue} ${AREA_UNIT_LABELS[unit]}\n💰 Estimated Value: ${formatPKR(est.estimate.avg)}\n📊 95% Confidence Range: ${formatPKR(est.confidenceInterval95?.lower ?? est.estimate.low)} - ${formatPKR(est.confidenceInterval95?.upper ?? est.estimate.high)}\n\nCalculate yours free: https://propertyx.pk/tools/property-value?city=${city}&location=${location ?? ""}&type=${type}&area=${areaValue}&unit=${unit}&go=1`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn bg-[#25D366] text-white hover:bg-[#1ebe5b] w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold shadow-xs"
+                >
+                  <MessageCircle className="h-4 w-4" /> Share Valuation Report on WhatsApp
+                </a>
+              </div>
               <div className="mt-5">
                 <MarketDataNote demo={result.isDemoData} />
               </div>

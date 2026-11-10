@@ -27,6 +27,15 @@ const config: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },
   experimental: { serverActions: { bodySizeLimit: "15mb" } },
+  async redirects() {
+    return [
+      {
+        source: "/society/:slug",
+        destination: "/area/:slug",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

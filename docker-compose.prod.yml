@@ -1,0 +1,132 @@
+services:
+  # Caddy Reverse Proxy & Automatic Let's Encrypt TLS
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3 QUIC
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - propertyx-network
+
+  # Next.js 15 Web Application & API
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-propertyx}:${POSTGRES_PASSWORD:-ChangeMeSecurePass123!}@postgres:5432/${POSTGRES_DB:-propertyx}?sslmode=disable
+      - DIRECT_URL=postgresql://${POSTGRES_USER:-propertyx}:${POSTGRES_PASSWORD:-ChangeMeSecurePass123!}@postgres:5432/${POSTGRES_DB:-propertyx}?sslmode=disable
+      - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET must be set}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://propertyx.pk}
+      - REDIS_URL=redis://redis:6379
+      - MEILISEARCH_HOST=http://meilisearch:7700
+      - MEILISEARCH_KEY=${MEILISEARCH_MASTER_KEY:-ChangeMeMeiliMasterKey123!}
+      - STORAGE_DRIVER=${STORAGE_DRIVER:-r2}
+      - S3_BUCKET=${S3_BUCKET:-propertyx-media}
+      - S3_REGION=${S3_REGION:-auto}
+      - S3_ENDPOINT=${S3_ENDPOINT:-https://<account-id>.r2.cloudflarestorage.com}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
+      - S3_PUBLIC_URL=${S3_PUBLIC_URL:-}
+      - WHATSAPP_PROVIDER=${WHATSAPP_PROVIDER:-meta}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN:-}
+      - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-resend}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - EMAIL_FROM=${EMAIL_FROM:-PropertyX <no-reply@propertyx.pk>}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - propertyx-network
+
+  # Background Outbox & Scheduler Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["npm", "run", "worker"]
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-propertyx}:${POSTGRES_PASSWORD:-ChangeMeSecurePass123!}@postgres:5432/${POSTGRES_DB:-propertyx}?sslmode=disable
+      - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET must be set}
+      - REDIS_URL=redis://redis:6379
+      - WHATSAPP_PROVIDER=${WHATSAPP_PROVIDER:-meta}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN:-}
+      - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-}
+      - SMS_PROVIDER=${SMS_PROVIDER:-pk_sms}
+      - PK_SMS_ENDPOINT=${PK_SMS_ENDPOINT:-}
+      - PK_SMS_API_KEY=${PK_SMS_API_KEY:-}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-resend}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - EMAIL_FROM=${EMAIL_FROM:-PropertyX <no-reply@propertyx.pk>}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - propertyx-network
+
+  # PostgreSQL 17 Database with PostGIS
+  postgres:
+    image: postgis/postgis:17-3.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-propertyx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMeSecurePass123!}
+      POSTGRES_DB: ${POSTGRES_DB:-propertyx}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-propertyx} -d ${POSTGRES_DB:-propertyx}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - propertyx-network
+
+  # Redis for Rate Limiting, Caching & Queues
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - propertyx-network
+
+  # Meilisearch for Instant Typo-Tolerant Property Search
+  meilisearch:
+    image: getmeili/meilisearch:v1.12-alpine
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:-ChangeMeMeiliMasterKey123!}
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch_data:/meili_data
+    networks:
+      - propertyx-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  meilisearch_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  propertyx-network:
+    driver: bridge

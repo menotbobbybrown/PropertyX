@@ -52,6 +52,7 @@ interface CheckoutRequest {
   gateway: string;
   /** subscription: "monthly" | "yearly"; featured: number of days */
   option?: string;
+  amount?: number;
 }
 
 /** Creates a pending payment with a server-computed price and returns the gateway action. */
@@ -97,6 +98,15 @@ export async function startCheckout(db: Database, actor: Actor | null, req: Chec
     amount = COUNTRY.code === "ae" ? (req.purpose === "project_booking" ? 5_000 : 500) : req.purpose === "project_booking" ? 50_000 : 5_000;
     description = `${req.purpose === "project_booking" ? "Booking token" : "Booking fee"} — ${proj.name}`;
     returnUrl = `/project/${proj.slug}`;
+  } else if (req.purpose === "token_deposit" || req.purpose === "escrow_deposit") {
+    const [l] = await db.select().from(s.propertyListings).where(eq(s.propertyListings.id, req.referenceId));
+    if (!l) throw notFound("Listing");
+    if (l.status !== "active") throw badRequest("Listing is not available for deposit");
+    amount = Number(req.amount ?? 50_000);
+    description = `Token Deposit (Escrow) — ${l.title.slice(0, 60)}`;
+    metadata.listingId = l.id;
+    metadata.holdDays = 7;
+    returnUrl = `/property/${l.slug}`;
   } else throw badRequest("Unknown payment purpose");
   if (amount <= 0) throw badRequest("Nothing to pay");
 
@@ -166,6 +176,18 @@ async function fulfil(db: Database, p: typeof s.payments.$inferSelect) {
     const [buyer] = await db.select().from(s.users).where(eq(s.users.id, p.userId));
     await db.insert(s.leads).values({ projectId: proj.id, developerId: dev.id, recipientId: dev.ownerId, userId: buyer.id, name: buyer.name, phone: buyer.phone ?? "", email: buyer.email, message: `Paid ${p.description} (invoice ${p.invoiceNumber}).`, source: "form", status: "qualified" });
     if (dev.ownerId) await notify(db, { userId: dev.ownerId, type: "payment", title: "Booking payment received", body: `${buyer.name} paid ${p.description}.`, link: "/dashboard/leads" });
+  } else if (p.purpose === "token_deposit" || p.purpose === "escrow_deposit") {
+    const listingId = (meta.listingId as string) || p.referenceId;
+    if (listingId) {
+      await db.update(s.propertyListings).set({ status: "paused" }).where(eq(s.propertyListings.id, listingId));
+      await notify(db, {
+        userId: p.userId,
+        type: "payment",
+        title: "Token Deposit Held in Escrow",
+        body: `Your token deposit of PKR ${p.amount.toLocaleString()} is securely held in escrow. Listing is reserved for 7 days.`,
+        link: "/account",
+      });
+    }
   }
   await db.update(s.payments).set({ fulfilledAt: new Date() }).where(eq(s.payments.id, p.id));
   await notify(db, { userId: p.userId, type: "payment", title: "Payment received", body: `${p.description} — ${formatPKRFull(p.amount)} (invoice ${p.invoiceNumber}).`, link: `/dashboard/billing` });

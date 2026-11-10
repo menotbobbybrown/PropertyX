@@ -7,9 +7,10 @@
  *  - local:    files under STORAGE_PUBLIC_DIR / STORAGE_PRIVATE_DIR (development, a VPS with a disk)
  *  - db:       the stored_files table — the default on Vercel, whose disk is temporary and per-instance
  *  - supabase: Supabase Storage (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY), for large photo volumes
+ *  - s3 / r2:  Cloudflare R2 / AWS S3 compatible object storage (zero egress fees on R2)
  * Files are always served through our own routes, so URLs never change when the driver does.
  */
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, unlink, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -40,14 +41,98 @@ function safeKey(key: string) {
   return key;
 }
 
-type Driver = "local" | "db" | "supabase";
+type Driver = "local" | "db" | "supabase" | "s3" | "r2";
 export function storageDriver(): Driver {
   const d = (process.env.STORAGE_DRIVER ?? "").toLowerCase();
+  if ((d === "s3" || d === "r2") && process.env.S3_ENDPOINT && process.env.S3_ACCESS_KEY_ID) return d as Driver;
   if (d === "supabase" && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) return "supabase";
   if (d === "db") return "db";
   // a local disk can't hold uploads on Vercel (temporary, not shared between instances)
   if (process.env.VERCEL) return "db";
   return "local";
+}
+
+/* --- Cloudflare R2 / AWS S3 Storage (SigV4 signing, zero extra dependencies) --- */
+function s3Signer(opts: {
+  method: string;
+  url: URL;
+  body?: Buffer;
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;
+  headers?: Record<string, string>;
+}) {
+  const service = "s3";
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const payloadHash = createHash("sha256").update(opts.body ?? Buffer.alloc(0)).digest("hex");
+
+  const headers: Record<string, string> = {
+    host: opts.url.host,
+    "x-amz-date": amzDate,
+    "x-amz-content-sha256": payloadHash,
+    ...(opts.headers ?? {}),
+  };
+
+  const sortedKeys = Object.keys(headers).map((k) => k.toLowerCase()).sort();
+  const canonicalHeaders = sortedKeys.map((k) => `${k}:${headers[k].trim()}\n`).join("");
+  const signedHeaders = sortedKeys.join(";");
+
+  const canonicalRequest = [
+    opts.method,
+    opts.url.pathname,
+    opts.url.searchParams.toString(),
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join("\n");
+
+  const credentialScope = `${dateStamp}/${opts.region}/${service}/aws4_request`;
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    createHash("sha256").update(canonicalRequest).digest("hex"),
+  ].join("\n");
+
+  const kDate = createHmac("sha256", `AWS4${opts.secretAccessKey}`).update(dateStamp).digest();
+  const kRegion = createHmac("sha256", kDate).update(opts.region).digest();
+  const kService = createHmac("sha256", kRegion).update(service).digest();
+  const kSigning = createHmac("sha256", kService).update("aws4_request").digest();
+  const signature = createHmac("sha256", kSigning).update(stringToSign).digest("hex");
+
+  headers["authorization"] = `AWS4-HMAC-SHA256 Credential=${opts.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  return headers;
+}
+
+async function s3Fetch(method: string, v: Visibility, key: string, body?: Buffer, contentType?: string) {
+  const endpoint = (process.env.S3_ENDPOINT || "").replace(/\/$/, "");
+  const bucket = process.env.S3_BUCKET || "propertyx-media";
+  const region = process.env.S3_REGION || "auto";
+  const accessKeyId = process.env.S3_ACCESS_KEY_ID || "";
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY || "";
+  const objectPath = `/${bucket}/${v}/${key}`;
+  const url = new URL(objectPath, endpoint);
+
+  const reqHeaders: Record<string, string> = {};
+  if (contentType) reqHeaders["content-type"] = contentType;
+
+  const authHeaders = s3Signer({
+    method,
+    url,
+    body,
+    accessKeyId,
+    secretAccessKey,
+    region,
+    headers: reqHeaders,
+  });
+
+  return fetch(url.toString(), {
+    method,
+    headers: authHeaders,
+    body: body ? new Uint8Array(body) : undefined,
+  });
 }
 
 /* --- Supabase Storage (private buckets; we serve the files ourselves) --- */
@@ -68,7 +153,10 @@ function ensureBuckets() {
 export async function putFile(v: Visibility, key: string, data: Buffer) {
   safeKey(key);
   const driver = storageDriver();
-  if (driver === "db") {
+  if (driver === "s3" || driver === "r2") {
+    const r = await s3Fetch("PUT", v, key, data, "application/octet-stream");
+    if (!r.ok) throw new Error(`S3/R2 Upload failed (${r.status})`);
+  } else if (driver === "db") {
     await getSql()`insert into stored_files (key, visibility, data, size_bytes) values (${key}, ${v}, ${data}, ${data.length})
       on conflict (key) do update set data = excluded.data, size_bytes = excluded.size_bytes, visibility = excluded.visibility`;
   } else if (driver === "supabase") {
@@ -86,6 +174,11 @@ export async function putFile(v: Visibility, key: string, data: Buffer) {
 export async function getFile(v: Visibility, key: string): Promise<Buffer> {
   safeKey(key);
   const driver = storageDriver();
+  if (driver === "s3" || driver === "r2") {
+    const r = await s3Fetch("GET", v, key);
+    if (!r.ok) throw Object.assign(new Error("File not found"), { code: "ENOENT" });
+    return Buffer.from(await r.arrayBuffer());
+  }
   if (driver === "db") {
     const rows = await getSql()<{ data: Buffer }[]>`select data from stored_files where key = ${key} and visibility = ${v}`;
     if (!rows[0]) throw Object.assign(new Error("File not found"), { code: "ENOENT" });
@@ -113,7 +206,8 @@ export async function deleteFile(v: Visibility, key: string) {
   try {
     safeKey(key);
     const driver = storageDriver();
-    if (driver === "db") await getSql()`delete from stored_files where key = ${key}`;
+    if (driver === "s3" || driver === "r2") await s3Fetch("DELETE", v, key);
+    else if (driver === "db") await getSql()`delete from stored_files where key = ${key}`;
     else if (driver === "supabase") await sb(`object/${sbBucket(v)}/${key}`, { method: "DELETE" });
     else await unlink(path.join(baseDir(v), key));
   } catch {

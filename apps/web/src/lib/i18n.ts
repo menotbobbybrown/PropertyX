@@ -261,6 +261,16 @@ const UR: Record<string, string> = {
   Factory: "فیکٹری",
   Building: "عمارت",
   Other: "دیگر",
+  // PropertyX vs Zameen Trust Pillars & Market Intelligence
+  "Verified Title Deeds (Zero Ghost Ads)": "تصدیق شدہ ملکیتی دستاویزات (جعلی اشتہارات سے پاک)",
+  "Digital Bayana (100% Escrow Refund Guarantee)": "ڈیجیٹل بیعانہ (۱۰۰٪ رقم واپسی کی گارنٹی)",
+  "Hedonic AVM (Transparent Price CI Ranges)": "خودکار تخمینہ قیمت (شفاف مارکیٹ ریٹ)",
+  "WhatsApp-Native (Direct Verified Chat)": "واٹس ایپ رابطہ (براہ راست تصدیق شدہ بات چیت)",
+  "Market Pulse:": "مارکیٹ کی صورتحال:",
+  "Reserve Property (Escrow Token)": "پراپرٹی محفوظ کریں (ایسکرو ٹوکن)",
+  "Instant 1-Click WhatsApp Direct": "ایک کلک پر واٹس ایپ رابطہ",
+  "View Details →": "تفصیلات دیکھیں ←",
+
   // language switch
   "اردو میں دیکھیں": "اردو میں دیکھیں",
   "View in English": "View in English",

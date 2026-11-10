@@ -119,6 +119,29 @@ const twilioProvider: ChannelProvider = {
   },
 };
 
+/** Pakistani Telco / Bulk SMS Gateway (SMS_PROVIDER=pk_sms, PK_SMS_ENDPOINT, PK_SMS_API_KEY, PK_SMS_MASK) */
+const pkSmsProvider: ChannelProvider = {
+  name: "pk_sms",
+  async send(m) {
+    const endpoint = process.env.PK_SMS_ENDPOINT || "https://api.bulksms.pk/send";
+    const apiKey = process.env.PK_SMS_API_KEY || "";
+    const mask = process.env.PK_SMS_MASK || "PropertyX";
+    // standard Pakistani mobile format normalisation (923XXXXXXXXX)
+    const phone = m.to.replace(/\D/g, "").replace(/^0/, "92");
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        api_key: apiKey,
+        to: phone,
+        mask,
+        message: m.body,
+      }),
+    });
+    if (!res.ok) throw new Error(`pk_sms ${res.status}`);
+  },
+};
+
 /** WhatsApp Cloud API (WHATSAPP_PROVIDER=meta, WHATSAPP_TOKEN, WHATSAPP_PHONE_ID) */
 const whatsappCloudProvider: ChannelProvider = {
   name: "meta",
@@ -132,6 +155,22 @@ const whatsappCloudProvider: ChannelProvider = {
   },
 };
 
+/** Twilio WhatsApp (WHATSAPP_PROVIDER=twilio, TWILIO_SID, TWILIO_TOKEN, TWILIO_WHATSAPP_FROM) */
+const twilioWhatsappProvider: ChannelProvider = {
+  name: "twilio_whatsapp",
+  async send(m) {
+    const sid = process.env.TWILIO_SID!;
+    const from = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
+    const to = m.to.startsWith("whatsapp:") ? m.to : `whatsapp:${m.to}`;
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: "POST",
+      headers: { authorization: `Basic ${Buffer.from(`${sid}:${process.env.TWILIO_TOKEN}`).toString("base64")}`, "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ To: to, From: from, Body: m.body }),
+    });
+    if (!res.ok) throw new Error(`twilio_whatsapp ${res.status}`);
+  },
+};
+
 /** Expo push (PUSH_PROVIDER=expo) — suits React Native / Expo mobile apps. */
 const expoPushProvider: ChannelProvider = {
   name: "expo",
@@ -139,7 +178,7 @@ const expoPushProvider: ChannelProvider = {
     const res = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ to: m.to, title: m.subject ?? "Bismillah", body: m.body }),
+      body: JSON.stringify({ to: m.to, title: m.subject ?? "PropertyX", body: m.body }),
     });
     if (!res.ok) throw new Error(`expo ${res.status}`);
   },
@@ -151,9 +190,9 @@ export function providerFor(channel: string): ChannelProvider {
     case "email":
       return pick("EMAIL_PROVIDER", { resend: resendProvider });
     case "sms":
-      return pick("SMS_PROVIDER", { twilio: twilioProvider });
+      return pick("SMS_PROVIDER", { twilio: twilioProvider, pk_sms: pkSmsProvider, telenor: pkSmsProvider, ptcl: pkSmsProvider });
     case "whatsapp":
-      return pick("WHATSAPP_PROVIDER", { meta: whatsappCloudProvider });
+      return pick("WHATSAPP_PROVIDER", { meta: whatsappCloudProvider, twilio: twilioWhatsappProvider });
     case "push":
       return pick("PUSH_PROVIDER", { expo: expoPushProvider });
     default:

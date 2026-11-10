@@ -257,7 +257,7 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[number]["key"];
 export const NOTIFICATION_CHANNELS = ["in_app", "email", "sms", "whatsapp", "push"] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
-export const PAYMENT_PURPOSES = ["subscription", "featured_listing", "advertising", "booking_fee", "project_booking"] as const;
+export const PAYMENT_PURPOSES = ["subscription", "featured_listing", "advertising", "booking_fee", "project_booking", "token_deposit", "escrow_deposit"] as const;
 export type PaymentPurpose = (typeof PAYMENT_PURPOSES)[number];
 
 export const AD_FORMATS = [
