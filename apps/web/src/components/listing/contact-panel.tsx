@@ -22,6 +22,7 @@ export interface ContactProps {
   isOwner: boolean;
   active: boolean;
   saved: boolean;
+  verificationLevel?: number;
   user: { name: string; email: string; phone: string | null } | null;
 }
 
@@ -161,7 +162,17 @@ export function ContactPanel(p: ContactProps) {
         <button
           className="btn w-full bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm flex items-center justify-center gap-2 py-2.5"
           disabled={!p.active}
-          onClick={() => (p.user ? setModal("escrow") : loginFirst())}
+          onClick={() => {
+            if ((p.verificationLevel ?? 0) < 2) {
+              toast("Digital Bayana is only available on Verified listings to prevent fraud. Request owner to verify title deeds.", "error");
+              return;
+            }
+            if (p.user) {
+              setModal("escrow");
+            } else {
+              loginFirst();
+            }
+          }}
         >
           <ShieldCheck className="h-4 w-4" /> Reserve Property (Escrow Token)
         </button>

@@ -230,7 +230,7 @@ export async function submitVerification(db: Database, actor: Actor | null, inpu
   if (pending) throw conflict("A verification request is already pending for this item");
   const [req] = await db.insert(s.verificationRequests).values({ subjectType: input.subjectType, subjectId: input.subjectId, requestedLevel: input.level, submittedById: actor.id, notes: input.notes ?? null }).returning();
   if (docs.length) await db.update(s.documents).set({ verificationRequestId: req.id }).where(inArray(s.documents.id, docs.map((d) => d.id)));
-  if (input.subjectType === "listing" && input.level >= 3) await db.update(s.propertyListings).set({ verificationLevel: sql`greatest(${s.propertyListings.verificationLevel}, 3)` }).where(eq(s.propertyListings.id, input.subjectId));
+  // Hardened security invariant: Listing verification level is only promoted upon review approval, never on raw document submission.
   return req;
 }
 

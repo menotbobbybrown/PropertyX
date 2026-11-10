@@ -265,11 +265,17 @@ async function setFeatures(db: Database, propertyId: string, keys: string[]) {
 
 async function checkQuota(db: Database, actor: Actor, excludeListingId?: string) {
   if (actor.isStaff) return;
-  const plan = await getActivePlan(db, actor.id);
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(s.propertyListings)
     .where(and(eq(s.propertyListings.postedById, actor.id), inArray(s.propertyListings.status, ["active", "pending_review"]), excludeListingId ? sql`${s.propertyListings.id} <> ${excludeListingId}` : sql`true`));
+
+  // Anti-Sybil Guard: Unverified accounts (phone not confirmed) capped at 1 listing
+  if (!actor.phoneVerified && n >= 1) {
+    throw badRequest("Unverified accounts are limited to 1 listing. Please verify your mobile number with SMS OTP to unlock additional listings.");
+  }
+
+  const plan = await getActivePlan(db, actor.id);
   if (n >= plan.listingQuota) throw paymentRequired(`Your ${plan.name} plan allows ${plan.listingQuota} active listings. Upgrade your plan or pause a listing to post more.`);
 }
 

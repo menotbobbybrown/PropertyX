@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BedDouble, Bath, Maximize, Car, Building2, CalendarClock, Layers, Sofa, Hammer, Hash, Clock, CheckCircle2, ShieldAlert, Calculator, TrendingUp, HardHat, Receipt, Wallet, BadgeCheck, Landmark } from "lucide-react";
+import { BedDouble, Bath, Maximize, Car, Building2, CalendarClock, Layers, Sofa, Hammer, Hash, Clock, CheckCircle2, ShieldAlert, ShieldCheck, AlertTriangle, Calculator, TrendingUp, HardHat, Receipt, Wallet, BadgeCheck, Landmark } from "lucide-react";
 import { getBoundaries, getListingDetail, similarListings } from "@propertyx/core";
 import { formatPKR, formatArea, formatPriceWords, PROPERTY_TYPE_LABELS, FURNISHING_LABELS, CONDITION_LABELS, FEATURE_GROUP_LABELS, verificationInfo, describeSqft, truncate, isUAE, COUNTRY, COMPLETION_LABELS, formatHandover, annualServiceCharge } from "@propertyx/shared";
 import { db, getUser, appUrl } from "@/lib/server";
@@ -92,6 +92,33 @@ export default async function PropertyPage({ params }: Props) {
         <div className="mt-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <StatusPill status={l.status} />
           {l.status === "rejected" && l.rejectionReason ? `Not approved: ${l.rejectionReason}` : l.status === "pending_review" ? "This listing is waiting for moderator review and is not visible to the public yet." : "This listing is not currently available."}
+        </div>
+      )}
+
+      {/* HARDENED CONSUMER PROTECTION / VERIFIED DEED BANNERS */}
+      {l.status === "active" && l.verificationLevel < 2 && (
+        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-xs sm:text-sm text-amber-900 shadow-2xs">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-bold text-amber-950">Direct Seller Listing (Title Deeds Pending Verification)</p>
+            <p className="text-amber-800/90 leading-relaxed text-xs">
+              PropertyX has not yet physically inspected or legally verified ownership title deeds for this individual listing.
+              Never send advance cash, unrecorded token deposits, or mobile wallet transfers outside official escrow or banking channels.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {l.status === "active" && l.verificationLevel >= 4 && (
+        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-emerald-300 bg-emerald-50/80 p-4 text-xs sm:text-sm text-emerald-950 shadow-2xs">
+          <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-bold text-emerald-950">Verified Title Deed & Ownership (100% Escrow Guaranteed)</p>
+            <p className="text-emerald-800/90 leading-relaxed text-xs">
+              The original allotment letter, transfer slip, or registry for this property has been audited by PropertyX.
+              This listing is fully eligible for Digital Bayana / Escrow Token Reservation with a 100% refund guarantee.
+            </p>
+          </div>
         </div>
       )}
 
@@ -296,6 +323,7 @@ export default async function PropertyPage({ params }: Props) {
               isOwner={d.isOwner}
               active={l.status === "active"}
               saved={d.isSaved}
+              verificationLevel={l.verificationLevel}
               user={user ? { name: user.name, email: user.email, phone: user.phone } : null}
             />
             {d.agent && (
