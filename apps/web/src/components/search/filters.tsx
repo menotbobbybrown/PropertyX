@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SlidersHorizontal, X, Search, Map as MapIcon } from "lucide-react";
+import { SlidersHorizontal, X, Search, Map as MapIcon, ShieldCheck } from "lucide-react";
 import { LISTABLE_TYPES, FEATURES, FURNISHING_LABELS, CONDITION_LABELS, serializeSearchQuery, AREA_UNIT_LABELS, type SearchQuery, type PropertyType, type AreaUnit, COUNTRY, isUAE, COMPLETION_LABELS, formatPriceShort } from "@propertyx/shared";
 import { LocationAutocomplete } from "../location-autocomplete";
 import { CITY_LINKS } from "../nav-data";
@@ -42,6 +42,25 @@ export function SearchFilters({ initial, locationLabel, total }: { initial: Sear
           </button>
         ))}
       </div>
+
+      {/* KILLER ADVANTAGE: 1-CLICK VERIFIED TITLE DEEDS FILTER */}
+      <button
+        type="button"
+        onClick={() => set({ verified: !q.verified })}
+        className={`w-full flex items-center justify-between rounded-xl p-2.5 sm:p-3 border text-xs sm:text-sm font-semibold transition-all ${
+          q.verified
+            ? "border-emerald-500 bg-emerald-50 text-emerald-950 shadow-xs ring-2 ring-emerald-500/20"
+            : "border-slate-200 bg-slate-50/80 text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/40"
+        }`}
+      >
+        <span className="flex items-center gap-2">
+          <ShieldCheck className={`h-4 w-4 shrink-0 ${q.verified ? "text-emerald-600" : "text-slate-400"}`} />
+          <span className="text-start">Verified Title Deeds Only</span>
+        </span>
+        <span className={`text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 ${q.verified ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"}`}>
+          {q.verified ? "Active" : "0 Ghost Ads"}
+        </span>
+      </button>
       <div>
         <label className="label" htmlFor="f-q">Keyword</label>
         <input id="f-q" className="input" placeholder="e.g. corner, solar, PX-1000123" value={q.q ?? ""} onChange={(e) => set({ q: e.target.value || undefined })} />
