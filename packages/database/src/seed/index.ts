@@ -628,10 +628,10 @@ export async function seedDemo(db: Database, opts: { log?: (m: string) => void }
   }
 
   const insertedProps: { id: string }[] = [];
-  for (const part of chunk(propertyRows, 300)) insertedProps.push(...(await db.insert(s.properties).values(part).returning({ id: s.properties.id })));
+  for (const part of chunk(propertyRows, 50)) insertedProps.push(...(await db.insert(s.properties).values(part).returning({ id: s.properties.id })));
   const listingInsert = listingRows.map(({ _features, _images, _history, ...l }) => ({ ...l, propertyId: insertedProps[Number(l.propertyId)].id }));
   const insertedListings: { id: string; propertyId: string; status: string; purpose: string; price: number; postedById: string | null; agentId: string | null; publishedAt: Date | null }[] = [];
-  for (const part of chunk(listingInsert, 300))
+  for (const part of chunk(listingInsert, 50))
     insertedListings.push(
       ...(await db
         .insert(s.propertyListings)
@@ -648,9 +648,9 @@ export async function seedDemo(db: Database, opts: { log?: (m: string) => void }
     l._images.forEach((m, k) => media.push({ propertyId: pid, kind: m.kind, url: m.url, sortOrder: k, caption: m.kind === "floor_plan" ? "Floor plan (indicative)" : null, sha256: `demo-${l._hashGroup ?? i}-${k}`, isSeed: true }));
     l._history.forEach((h) => hist.push({ listingId: insertedListings[i].id, oldPrice: h.old, newPrice: h.next, changedAt: h.at, changedById: l.postedById }));
   });
-  for (const part of chunk(pf, 1000)) await db.insert(s.propertyFeatures).values(part).onConflictDoNothing();
-  for (const part of chunk(media, 1000)) await db.insert(s.propertyMedia).values(part);
-  for (const part of chunk(hist, 1000)) await db.insert(s.propertyPriceHistory).values(part);
+  for (const part of chunk(pf, 150)) await db.insert(s.propertyFeatures).values(part).onConflictDoNothing();
+  for (const part of chunk(media, 150)) await db.insert(s.propertyMedia).values(part);
+  for (const part of chunk(hist, 150)) await db.insert(s.propertyPriceHistory).values(part);
   log(`  ${insertedListings.length} listings`);
 
   const active = insertedListings.filter((l) => l.status === "active");
