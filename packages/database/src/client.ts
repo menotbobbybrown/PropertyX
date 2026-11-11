@@ -24,12 +24,13 @@ export function connectionOptions(rawUrl: string) {
   // Supabase's pooler on 5432 is session mode (one server connection per client, 15 max on small plans),
   // which serverless instances exhaust within seconds; the same pooler on 6543 is transaction mode
   if (process.env.VERCEL && url.hostname.endsWith(".pooler.supabase.com") && url.port === "5432") url.port = "6543";
-  const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname);
+  const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname) || url.hostname.endsWith(".internal") || url.searchParams.get("sslmode") === "disable";
   const pooled = url.port === "6543" || url.searchParams.get("pgbouncer") === "true" || url.hostname.includes("-pooler.");
   const prepare = process.env.DB_PREPARE ? process.env.DB_PREPARE === "true" : !pooled;
   // postgres.js forwards unknown URL params to the server as settings; pgbouncer=… is Prisma-only
   url.searchParams.delete("pgbouncer");
-  const ssl = local || url.searchParams.has("sslmode") ? undefined : ("require" as const);
+  url.searchParams.delete("sslmode");
+  const ssl = local ? undefined : ("require" as const);
   const max = Number(process.env.DB_POOL_MAX ?? (process.env.VERCEL ? 3 : 10));
   // postgres.js pipelines extra queries onto busy connections; Supavisor in transaction mode can stall
   // on pipelined queries (seen as a backend stuck "waiting on Client"), so send one query per connection at a time
