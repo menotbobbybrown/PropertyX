@@ -5,47 +5,47 @@ import { Tr } from "./tr";
 export function VerificationBadge({ level, kind = "property", size = "sm" }: { level: number; kind?: "property" | "agent" | "profile"; size?: "sm" | "md" }) {
   if (level <= 0) return null;
   const info = verificationInfo(level);
-  const cls = size === "md" ? "text-xs px-2.5 py-1" : "";
+  const cls = size === "md" ? "text-xs px-2.5 py-1 font-semibold" : "text-[11px] font-semibold";
   if (kind !== "property") {
     if (level >= 2)
       return (
-        <span className={`badge bg-brand-50 text-brand-800 ring-1 ring-brand-200 ${cls}`} title={info.description}>
-          <BadgeCheck className="h-3.5 w-3.5" /> <Tr k={kind === "agent" ? "Verified Agent" : "Verified"} />
+        <span className={`badge bg-emerald-50 text-emerald-800 ring-1 ring-emerald-600/20 shadow-xs ${cls}`} title={info.description}>
+          <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> <Tr k={kind === "agent" ? "Verified Agent" : "Verified Identity"} />
         </span>
       );
     return (
-      <span className={`badge bg-slate-100 text-slate-700 ${cls}`} title={info.description}>
-        <Phone className="h-3 w-3" /> <Tr k="Phone Verified" />
+      <span className={`badge bg-slate-100 text-slate-700 ring-1 ring-slate-200 ${cls}`} title={info.description}>
+        <Phone className="h-3 w-3 text-slate-500" /> <Tr k="Phone Verified" />
       </span>
     );
   }
   if (level >= 5)
     return (
-      <span className={`badge bg-gold-100 text-gold-800 ring-1 ring-gold-300 ${cls}`} title={info.description}>
-        <Crown className="h-3.5 w-3.5" /> <Tr k="Premium Verified" />
+      <span className={`badge bg-gold-50 text-gold-900 ring-1 ring-gold-400/40 shadow-xs ${cls}`} title={info.description}>
+        <Crown className="h-3.5 w-3.5 text-gold-600" /> <Tr k="Physical Inspection Verified" />
       </span>
     );
   if (level >= 4)
     return (
-      <span className={`badge bg-brand-700 text-white ${cls}`} title={info.description}>
-        <ShieldCheck className="h-3.5 w-3.5" /> <Tr k="Verified Property" />
+      <span className={`badge bg-emerald-800 text-white shadow-xs tracking-tight ${cls}`} title={info.description}>
+        <ShieldCheck className="h-3.5 w-3.5 text-emerald-200" /> <Tr k="Verified Title Deed" />
       </span>
     );
   if (level === 3)
     return (
       <span className={`badge bg-sky-50 text-sky-800 ring-1 ring-sky-200 ${cls}`} title={info.description}>
-        <FileCheck2 className="h-3.5 w-3.5" /> <Tr k="Docs Submitted" />
+        <FileCheck2 className="h-3.5 w-3.5 text-sky-600" /> <Tr k="Docs In Review" />
       </span>
     );
   if (level === 2)
     return (
-      <span className={`badge bg-slate-100 text-slate-700 ${cls}`} title={info.description}>
-        <IdCard className="h-3.5 w-3.5" /> <Tr k="ID Verified" />
+      <span className={`badge bg-slate-100 text-slate-800 ring-1 ring-slate-200 ${cls}`} title={info.description}>
+        <IdCard className="h-3.5 w-3.5 text-slate-600" /> <Tr k="ID Verified Owner" />
       </span>
     );
   return (
-    <span className={`badge bg-slate-100 text-slate-600 ${cls}`} title={info.description}>
-      <Phone className="h-3 w-3" /> <Tr k="Phone Verified" />
+    <span className={`badge bg-slate-100 text-slate-600 ring-1 ring-slate-200/80 ${cls}`} title={info.description}>
+      <Phone className="h-3 w-3 text-slate-400" /> <Tr k="Phone Verified" />
     </span>
   );
 }
